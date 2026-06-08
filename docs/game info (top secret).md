@@ -8,7 +8,8 @@ This is the main page where all official released information related to the gam
 <h2>Media</h2>
 
 Presentation of the Game
-[Netwar Convention (SECRET).pdf](https://github.com/user-attachments/files/28724800/Netwar.Convention-2.pdf)
+
+[Netwar Convention (SECRET).pdf](https://github.com/user-attachments/files/28725023/Netwar.Convention-3.pdf)
 
 
 <h2>FAQ</h2>

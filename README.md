@@ -1,11 +1,19 @@
-# Netwar Con
+# [lastpsyop.com](https://lastpsyop.com/)
 
 This repo is for the website & general planning for the event **September 4-6 in Austin, TX** (labor day weekend). 
 
-https://kat-stack.github.io/netwar-con/
+Also known as "Netwar Con" // "Propaganda Party" // "The First Psyops Hackathon". Use the appropriate name depending on who you're talking/pitching to. 
 
-### Inspiration / vision
+# Current Status
 
-- Close the loop, interactive art experiment & conference - https://libertymyself.substack.com/p/wip-close-the-loop-interactive-art
-- Precedent for a netwar convention - https://libertymyself.substack.com/p/precedent-for-a-netwar-convention)
-- (May 8) Current State of the Event Planning - https://libertymyself.substack.com/p/current-state-of-the-event-planning
+TODO
+
+---
+
+### Appendix / WIP writeups & videos
+
+[Appendix.md](./docs/Appendix.md)
+
+Best explanation so far (June 1) - https://defenderofthebasic.substack.com/p/the-last-psyop
+
+

@@ -21,7 +21,7 @@ You will be assigned teams at some point shortly prior to the game, and may choo
 
 Everything else will be handled in the game. 
 
-You will show up, be initiated into the event via a designed process, then you and your team will work together to build a new identity in-game materials. This will include objectives, narratives, strategies, and much much more.
+You will show up, be initiated into the event via a designated process, then you and your team will work together to build a new identity in-game materials. This will include objectives, narratives, strategies, and much much more.
 
 Each squad will have a handful of roles that each player on the team can choose from. Each squad will have at least:
 

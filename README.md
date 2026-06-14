@@ -6,7 +6,7 @@ Also known as "Netwar Con" // "Propaganda Party" // "The First Psyops Hackathon"
 
 ----
 
-Join the event Discord (this is for both "upcoming players" and those working in the backstage / meta game leading up to the event): https://discord.gg/7vXp3UZzzt
+Join the event Discord (this is for both "upcoming players" and those working in the backstage / meta game leading up to the event): https://discord.gg/Yxrr98ZDbw
 
 
 <img width="700" height="auto" alt="image" src="https://github.com/user-attachments/assets/c663264c-ffe1-421d-941c-b2908896bd1a" />

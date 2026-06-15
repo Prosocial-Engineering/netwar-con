@@ -69,6 +69,12 @@
     'https://web.english.upenn.edu/~cavitch/pdf-library/Bernays_Propaganda.pdf',       // Bernays — Propaganda
     'https://en.wikipedia.org/wiki/Born_secret',
     'https://dn790007.ca.archive.org/0/items/pdfy-NekqfnoWIEuYgdZl/Manufacturing%20Consent%20%5BThe%20Political%20Economy%20Of%20The%20Mass%20Media%5D.pdf',  // Herman & Chomsky
+    'https://en.wikipedia.org/wiki/Zhemao_hoaxes',                                   // fabricated Russian history on Wikipedia
+    'https://en.wikipedia.org/wiki/False_flag',
+    'https://en.wikipedia.org/wiki/Memory_hole',
+    'https://en.wikipedia.org/wiki/Book_burning',
+    'https://www.goodreads.com/en/book/show/929587.Tl_n_Uqbar_Orbis_Tertius',        // Borges — a fiction that rewrites reality
+    'https://4chan.org/pol',
     'https://www.cnn.com/world',
     'https://www.foxnews.com/world',
     'https://www.nytimes.com/section/world',

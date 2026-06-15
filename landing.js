@@ -43,6 +43,10 @@
 
   /* ---- background muzak (fades in on reveal); the master toggle lives in puzzle.js ---- */
   const bgm = $('bgm');
+  // warm the muzak now (download only — playback still needs the user gesture) so it's cached and
+  // plays instantly on reveal. Firefox treats <audio preload="auto"> conservatively and otherwise
+  // won't fetch it until the first play(), which is why the sound came in late there vs Chrome.
+  if (bgm) { try { bgm.preload = 'auto'; bgm.load(); } catch (e) {} }
   let bgmFadeT = 0;
   function bgmFadeIn() {
     if (!bgm || !soundOn()) return;
@@ -59,6 +63,19 @@
     else { clearInterval(bgmFadeT); if (bgm) bgm.pause(); }
   });
 
+  // Firefox is conservative about lazy images inside a subtree that was just un-hidden: it waits
+  // until they're nearly in view to fetch (Chrome uses a much wider margin), so the host portraits
+  // visibly pop in as you scroll. Warm them into the HTTP cache a beat after the reveal so the lazy
+  // <img>s load instantly from cache when scrolled to — matching Chrome's eagerness.
+  function warmRevealImages() {
+    setTimeout(() => {
+      document.querySelectorAll('#reveal img').forEach((img) => {
+        const src = img.currentSrc || img.getAttribute('src');
+        if (src) { const w = new Image(); w.src = src; }
+      });
+    }, 1000);
+  }
+
   /* ---- the reveal: cross from the gate into The Last Psyop (called by puzzle.js on bless) ---- */
   function reveal(instant) {
     document.title = 'Our Last Psyop';
@@ -71,6 +88,7 @@
     setTimeout(() => {
       hero.style.display = 'none';
       revealEl.hidden = false;                       // rendered but still opacity:0 (invisible)
+      warmRevealImages();                            // prefetch the below-the-fold portraits (esp. for Firefox)
       window.scrollTo({ top: 0, behavior: 'smooth' });
       // only fade the text in once the LED font + video frame are ready, so the title never flashes
       // in the fallback font and the backdrop is already painted
@@ -152,6 +170,14 @@
     const run = 'eternal september · '.repeat(18);   // duplicated for a seamless -50% loop
     esTrack.innerHTML = '<span class="es-run">' + run + '</span><span class="es-run">' + run + '</span>';
   }
+
+  /* ---- easter egg: Cmd/Ctrl+Shift+L swaps the "A" in "The Last Psyop" for the warning-eye glyph ---- */
+  addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.code === 'KeyL' || e.key === 'l' || e.key === 'L')) {
+      e.preventDefault();
+      body.classList.toggle('tri-a');
+    }
+  });
 
   /* ---- allow the puzzle to be skipped: ?reveal jumps straight into The Last Psyop ---- */
   if (location.search.includes('reveal')) {

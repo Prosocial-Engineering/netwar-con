@@ -265,7 +265,12 @@
 
   // (d) the OPENING: large hazard symbols flip in the CENTRE of the triangle — ☣ → ☢ → eye (the 3rd flip)
   const eyeVis = [hazard.querySelector('g[clip-path="url(#eyeClip)"]'), $('rim'), $('crease')].filter(Boolean);
-  let spinning = true;   // play the ☣ → ☢ → eye opening flip by default (re-enabled; see startSpin() below)
+  // On a Back / bfcache return we hard-reload to a guaranteed-clean eye (see the pageshow handler far
+  // below). Skip the opening flip on THAT reload so the return lands straight on the resting, clickable
+  // eye instead of replaying the ~2s intro every time you come back from a rabbit hole.
+  let skipFlip = false;
+  try { if (sessionStorage.getItem('psyop:skipflip')) { skipFlip = true; sessionStorage.removeItem('psyop:skipflip'); } } catch (e) {}
+  let spinning = !skipFlip;   // play the ☣ → ☢ → eye opening flip by default; skip it on a bfcache reload
   const EYE_CX = 300, EYE_CY = 355;                  // the pupil / eye centre (the flip lands here)
   // per-glyph size; the ink is centred on (cx, cy) by canvas measurement in setFace, so we aim the
   // ink centre right at the eye centre (EYE_CX/EYE_CY) — the flip then lands exactly on the eye.
@@ -347,7 +352,10 @@
       }), HOLD);
     });
   }
-  startSpin();   // the opening: biohazard → radioactive → eye flips into the triangle centre
+  // the opening: biohazard → radioactive → eye flips into the triangle centre.
+  // On a bfcache reload (Back from a rabbit hole) we skip it and show the resting eye immediately.
+  if (skipFlip) { if (flipSym.isConnected) flipSym.remove(); eyeVis.forEach((el) => { el.style.opacity = '1'; el.removeAttribute('transform'); }); }
+  else startSpin();
 
   (function tick() {
     intensity += ((blessed ? 0 : targetInt) - intensity) * 0.12;
@@ -601,10 +609,21 @@
     _restoreFrames = 40;                       // ~0.6s of forced triangle repaints (beats Firefox's bfcache snapshot)
     applyIntensity(0);   // force the resting visuals immediately (don't wait for the rAF tick)
   }
-  // only reset on a bfcache RESTORE (e.persisted) — a fresh load must let the opening flip play.
-  // resetEye() handles the immediate repaint; the tick() resting self-heal above is the guarantee
-  // against Firefox repainting the bfcache-frozen red frame a few frames after pageshow.
-  window.addEventListener('pageshow', (e) => { if (e.persisted) resetEye(); });
+  // Back / bfcache RESTORE — the Firefox-only "triangle stuck red after Back" bug lives here.
+  // Firefox restores the page frozen exactly as you left it (mid-alarm, the triangle painted red) and
+  // will NOT repaint a flat <polygon fill> in place, no matter what value we write — the iris only
+  // recovers because applyIntensity() actively rewrites its gradient <stop> colours, which a flat fill
+  // has no equivalent of. Every in-place attempt (clear the fill, re-assert it, alternate two yellows
+  // each frame) left the red snapshot painted. The one thing that reliably throws the frozen snapshot
+  // away is a real reload — so on a persisted pageshow we reload, flagging the next load to skip the
+  // opening flip so the return is instant. Chrome repaints flat fills in place, so it never hit this.
+  // If the gate's already solved (blessed → the landing), there's no red gate to clear; leave it.
+  window.addEventListener('pageshow', (e) => {
+    if (!e.persisted || blessed) return;
+    try { sessionStorage.setItem('psyop:skipflip', '1'); } catch (_) {}
+    try { triEl.style.fill = '#f2dd00'; scleraE.style.fill = '#f2dd00'; if (hazard) hazard.style.visibility = 'hidden'; } catch (_) {}  // hide the frozen red for the blink before reload paints
+    location.reload();
+  });
   window.addEventListener('pagehide', resetEye);
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopShimmer(); else if (!spinning) resetEye(); });
 

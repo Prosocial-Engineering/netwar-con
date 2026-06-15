@@ -1,0 +1,265 @@
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+  /* default cursor: biohazard gloved hand, pointing (hotspot at fingertip) */
+  cursor: url("assets/cursor-point.svg") 14 3, auto;
+}
+
+/* anything clickable: open grab; while pressing: closed grab */
+#eyeHit, .row, .row input, .x, button, a, #main a {
+  cursor: url("assets/cursor-grab.svg") 20 20, pointer;
+}
+#eyeHit:active, .row:active, .x:active, button:active, a:active {
+  cursor: url("assets/cursor-grab-closed.svg") 20 20, pointer;
+}
+
+/* ░░░ SPLASH / INFOHAZARD GATE ░░░ */
+#splash {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #000;
+  transition: opacity 1s ease, background .6s ease;
+}
+#splash.fade { opacity: 0; pointer-events: none; }
+
+/* surveillance ambience (clicks pass through) */
+#splash::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 4;
+  background: radial-gradient(ellipse at center, transparent 38%, rgba(0,0,0,.9) 100%);
+}
+#splash::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 4;
+  background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.16) 2px 4px);
+  mix-blend-mode: multiply; opacity: .55;
+}
+
+#hazard {
+  width: min(86vmin, 680px);
+  height: auto;
+  position: relative;
+  z-index: 1;
+  will-change: transform;
+}
+
+/* neon-yellow infohazard triangle */
+.tri {
+  filter:
+    drop-shadow(0 0 4px #eaff00)
+    drop-shadow(0 0 16px #eaff00)
+    drop-shadow(0 0 38px rgba(234,255,0,.65));
+  animation: flicker 6.5s steps(1, end) infinite;
+  transition: filter .85s ease, stroke .85s ease;
+}
+.rim {
+  filter: drop-shadow(0 0 4px rgba(234,255,0,.55));
+  transition: filter .85s ease, stroke .85s ease;
+}
+/* #gaze glow is driven per-frame from JS (proximity → red); base value here */
+#gaze { filter: drop-shadow(0 0 7px rgba(234,255,0,.7)); }
+
+/* biohazard trefoil symbol radiating from the eye */
+#bio { display: none; }
+body.bio #bio { display: inline; }
+.bio-ring {
+  fill: none; stroke: #eaff00; stroke-width: 12;
+  filter: drop-shadow(0 0 6px rgba(234,255,0,.6));
+}
+.bio-neck {
+  fill: #eaff00;
+  filter: drop-shadow(0 0 6px rgba(234,255,0,.6));
+}
+
+/* the info-"i" pupil mask is toggled on the pupil from JS (see main.js) */
+
+/* power-off: everything yellow goes dark when you click the eye */
+#hazard.off .tri      { stroke: #2b2b22; filter: none; animation: none; }
+#hazard.off .rim      { stroke: #242420; filter: none; }
+#hazard.off .bio-ring { stroke: #242420; filter: none; }
+#hazard.off .bio-neck { fill: #242420; filter: none; }
+#hazard.off #gaze     { filter: none; }
+#hazard.off .crease   { stroke: #242420; }
+
+@keyframes flicker {
+  0%, 96%, 100% { opacity: 1; }
+  97% { opacity: .72; } 98% { opacity: .95; } 99% { opacity: .82; }
+}
+
+/* proximity "dread" red wash */
+#dread {
+  position: fixed; inset: 0; pointer-events: none; z-index: 3;
+  opacity: var(--dread, 0);
+  background: radial-gradient(ellipse at center,
+    rgba(255,12,0,.5), rgba(150,0,0,.28) 45%, transparent 74%);
+  mix-blend-mode: screen;
+}
+
+/* ASCII render surface */
+#ascii {
+  position: fixed; inset: 0; margin: 0; z-index: 2;
+  display: none; place-content: center;
+  white-space: pre; pointer-events: none;
+  font: 700 min(1.04vw, 1.16vh)/1 ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: -0.02em;
+  color: #eaff00; text-shadow: 0 0 6px currentColor;
+  will-change: transform;
+}
+body.ascii #ascii  { display: grid; }
+body.ascii #hazard { opacity: 0; }   /* keep it in layout so the eye stays clickable */
+
+#hint {
+  position: fixed; bottom: 7vh; left: 0; right: 0; z-index: 6;
+  text-align: center; margin: 0;
+  color: #6c6c52;
+  font: 500 13px/1 ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: .3em; text-transform: uppercase;
+  animation: breathe 3.4s ease-in-out infinite;
+  transition: opacity .6s ease;
+}
+#hint.gone { opacity: 0; }
+@keyframes breathe { 0%,100% { opacity:.35; } 50% { opacity:.8; } }
+
+/* ASCII 0/1 explosion canvas — explicit viewport size so the backing store
+   (innerWidth*DPR) is downscaled to the viewport instead of overflowing 2× */
+#boom { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 40; pointer-events: none; display: none; }
+
+/* ░░░ SETTINGS PANEL ░░░ */
+.panel {
+  position: fixed; top: 24px; right: 24px; z-index: 60; width: 284px;
+  background: rgba(10,10,8,.92);
+  border: 1px solid #2c2c20; border-radius: 12px;
+  padding: 0 0 8px;
+  color: #d8d8c8;
+  font: 500 13px/1.4 ui-monospace, "SF Mono", Menlo, monospace;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  box-shadow: 0 14px 44px rgba(0,0,0,.6);
+  opacity: 0; transform: translateY(-8px) scale(.98);
+  transition: opacity .18s ease, transform .18s ease;
+}
+.panel.show { opacity: 1; transform: none; }
+.panel[hidden] { display: none; }
+.panel-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 14px; border-bottom: 1px solid #232318;
+}
+.panel-title { letter-spacing: .22em; color: #9b9b7a; font-size: 11px; }
+.x { background: none; border: none; color: #7a7a60; font-size: 14px; padding: 4px; line-height: 1; }
+.x:hover { color: #eaff00; }
+.row {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 11px 16px; user-select: none;
+}
+.row:hover { background: rgba(234,255,0,.05); }
+.row input {
+  appearance: none; -webkit-appearance: none;
+  width: 38px; height: 20px; border-radius: 20px; background: #33332a;
+  position: relative; flex: none; transition: background .2s;
+}
+.row input::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px; border-radius: 50%; background: #0a0a08;
+  transition: transform .2s;
+}
+.row input:checked { background: #eaff00; }
+.row input:checked::after { transform: translateX(18px); }
+.panel-foot { margin: 8px 16px 2px; color: #5a5a48; font-size: 10.5px; letter-spacing: .1em; }
+
+/* ░░░ MAIN SITE ░░░ */
+#main {
+  position: fixed; inset: 0;
+  display: grid; place-items: center; align-content: center; gap: 1.2rem;
+  background: #000; color: #e9e9df;
+  opacity: 0; transition: opacity 1.1s ease;
+}
+#main[hidden] { display: none; }
+#main.show { opacity: 1; }
+#main h1 {
+  margin: 0;
+  font: 700 clamp(30px, 8.5vmin, 88px)/1 ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: .14em; color: #f4f4e7;
+  text-shadow: 0 0 22px rgba(234,255,0,.22);
+}
+#main .sub { margin: 0; color: #5e5e4c; font: 400 14px/1 ui-monospace, Menlo, monospace; letter-spacing: .2em; }
+
+/* ░░░ INVERT THEME: a real biohazard warning sign ░░░
+   white world · solid YELLOW-filled triangle with a black border ·
+   the eye is the yellow of the sign (no separate background) with a black pupil */
+body.invert { background: #ffffff; }
+body.invert #splash { background: #ffffff; }
+body.invert #splash::before { background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.06) 100%); }
+body.invert #splash::after  { opacity: .07; }
+
+/* solid yellow triangle, black line, flat (no neon) */
+body.invert .tri {
+  fill: #f2dd00; stroke: #0c0c0c; stroke-width: 15; filter: none; animation: none;
+}
+/* eye blends into the yellow sign; only the black pupil + black lid read */
+body.invert #scleraE { fill: #f2dd00; }
+body.invert #hi      { fill: #f2dd00; opacity: .9; }   /* reflection is yellow too */
+body.invert .rim     { stroke: #0c0c0c; stroke-width: 4; filter: none; }
+body.invert .crease  { stroke: #0c0c0c; }
+/* black biohazard symbol on the yellow sign */
+body.invert .bio-ring { stroke: #0c0c0c; filter: none; }
+body.invert .bio-neck { fill: #0c0c0c; filter: none; }
+
+body.invert #hint  { color: #888; }
+body.invert #main  { background: #ffffff; color: #0c0c0c; }
+body.invert #main h1 { color: #0c0c0c; text-shadow: 0 0 24px rgba(242,221,0,.55); }
+body.invert #main .sub { color: #888; }
+body.invert #hazard.off .tri      { fill: #e7e7df; stroke: #b9b9aa; filter: none; }
+body.invert #hazard.off .rim      { stroke: #b9b9aa; }
+body.invert #hazard.off .bio-ring { stroke: #b9b9aa; }
+body.invert #hazard.off .bio-neck { fill: #b9b9aa; }
+
+/* ░░░ GLOW THEME: black void — the yellow triangle lights the dark to white
+   close around it, fading back to black further out ░░░ */
+body.glow, body.glow #splash { background: #000; }
+body.glow .tri {
+  fill: none; stroke: #eaff00; animation: none;
+  filter:
+    drop-shadow(0 0 2px #fffbe0)
+    drop-shadow(0 0 10px #fff6bc)
+    drop-shadow(0 0 28px #ffffff)
+    drop-shadow(0 0 72px rgba(255,255,255,.85))
+    drop-shadow(0 0 150px rgba(255,255,255,.5));
+}
+body.glow .rim {
+  filter: drop-shadow(0 0 6px #fff7c8) drop-shadow(0 0 22px rgba(255,255,255,.7));
+}
+body.glow .bio-ring { stroke: #eaff00; filter: drop-shadow(0 0 10px #ffffff) drop-shadow(0 0 30px rgba(255,255,255,.7)); }
+body.glow .bio-neck { fill: #eaff00; filter: drop-shadow(0 0 10px #ffffff) drop-shadow(0 0 30px rgba(255,255,255,.7)); }
+body.glow #hint { color: #8a8a78; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; }
+}
+
+/* ░░░ 90s NEOCITIES / 4CHAN CHROME (gate) ░░░ */
+.gate-marquee {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 5; pointer-events: none;
+  background: #9c0000; color: #fff; border-bottom: 2px solid #3a0000;
+  font: 700 12px/1 "Courier New", monospace; letter-spacing: .12em; padding: 6px 0;
+  text-shadow: 0 0 5px #ff6a6a;
+}
+.gate-chrome {
+  position: absolute; bottom: 1.6vh; left: 0; right: 0; z-index: 5; pointer-events: none;
+  display: flex; flex-wrap: wrap; gap: 10px 18px; justify-content: center; align-items: center;
+  font: 11px "Courier New", monospace; padding: 0 10px;
+}
+.gate-chrome .counter { font: 700 13px "Courier New", monospace; background: #000; color: #34ff77; border: 2px inset #0b7a2f; padding: 2px 8px; letter-spacing: 4px; box-shadow: 0 0 10px rgba(40,255,120,.25); }
+.gate-chrome .badge { border: 2px outset #5a5a5a; background: #1c1c1c; color: #bcd; padding: 2px 8px; }
+.gate-chrome .webring { color: #6c6; }
+/* tiled CRT texture + blinking, beveled frame */
+#splash { background-image:
+  repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px),
+  repeating-linear-gradient(45deg, rgba(70,110,70,.045) 0 2px, transparent 2px 9px); }
+.crt-frame { position: fixed; inset: 0; z-index: 7; pointer-events: none; border: 6px ridge rgba(60,120,60,.55); box-shadow: inset 0 0 60px rgba(0,0,0,.7); }
+#hint { animation: gateblink 1.4s steps(1) infinite; }
+@keyframes gateblink { 0%, 70% { opacity: .85; } 71%, 100% { opacity: .35; } }
+body.invert .gate-marquee, body.invert .crt-frame, body.glow .crt-frame { opacity: .5; }

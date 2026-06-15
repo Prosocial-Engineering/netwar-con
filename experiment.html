@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark light" />
+  <title>The Last Psyop</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ░░░ INFOHAZARD GATE ░░░ -->
+  <div id="splash">
+    <marquee class="gate-marquee" behavior="alternate" scrollamount="6" aria-hidden="true">&#9888;&nbsp;&nbsp;WARNING: INFOHAZARD AHEAD&nbsp;&nbsp;&#183;&nbsp;&nbsp;CLICK THE EYE TO ENTER&nbsp;&nbsp;&#183;&nbsp;&nbsp;YOU CANNOT UNSEE&nbsp;&nbsp;&#9888;</marquee>
+    <svg id="hazard" viewBox="0 0 600 560" xmlns="http://www.w3.org/2000/svg"
+         role="img" aria-label="Infohazard gate — click the eye to enter">
+      <defs>
+        <radialGradient id="iris" cx="50%" cy="48%" r="52%">
+          <stop id="s0" offset="0%"  stop-color="#fdffc2" />
+          <stop id="s1" offset="34%" stop-color="#eaff00" />
+          <stop id="s2" offset="72%" stop-color="#5c6d00" />
+          <stop id="s3" offset="100%" stop-color="#161a00" />
+        </radialGradient>
+        <radialGradient id="sclera" cx="50%" cy="50%" r="60%">
+          <stop offset="0%"  stop-color="#16160f" />
+          <stop offset="100%" stop-color="#050504" />
+        </radialGradient>
+        <clipPath id="eyeClip" clipPathUnits="userSpaceOnUse">
+          <path d="M 186 355 Q 300 290 414 355 Q 300 420 186 355 Z" />
+        </clipPath>
+        <!-- one biohazard arm (ring + tapered neck), rotated x3 around the eye -->
+        <g id="bioArm">
+          <circle class="bio-ring" cx="300" cy="251" r="40" fill="none" />
+          <path class="bio-neck" d="M295,325 L305,325 L315,291 L285,291 Z" />
+        </g>
+        <!-- info "i" punched into the pupil as a mask: the (yellow) iris behind
+             shows through, so the "i" reads in the iris colour on the black pupil -->
+        <mask id="iMask" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse">
+          <rect x="270" y="324" width="60" height="62" fill="#fff" />
+          <circle cx="300" cy="346.5" r="3.4" fill="#000" />
+          <rect x="296.8" y="351.5" width="6.4" height="14" rx="3.2" fill="#000" />
+        </mask>
+      </defs>
+
+      <!-- warning triangle -->
+      <polygon id="triangle" class="tri"
+               points="300,46 542,498 58,498"
+               fill="none" stroke="#eaff00" stroke-width="14" stroke-linejoin="round" />
+
+      <!-- biohazard trefoil symbol radiating from the eye (toggled in settings) -->
+      <g id="bio" aria-hidden="true">
+        <use href="#bioArm" />
+        <use href="#bioArm" transform="rotate(120 300 355)" />
+        <use href="#bioArm" transform="rotate(240 300 355)" />
+      </g>
+
+      <!-- eyeball: clipped to the almond, opened/closed by the inner #lid group -->
+      <g clip-path="url(#eyeClip)">
+        <g id="lid">
+          <ellipse id="scleraE" cx="300" cy="355" rx="120" ry="68" fill="url(#sclera)" />
+          <g id="gaze">
+            <circle id="irisC" cx="300" cy="355" r="47" fill="url(#iris)" />
+            <circle id="pupil" cx="300" cy="355" r="20" fill="#040403" />
+            <circle id="hi" cx="285" cy="340" r="7.5" fill="#fffbe6" opacity="0.8" />
+          </g>
+        </g>
+      </g>
+
+      <!-- almond rim + closed-eye crease -->
+      <path id="rim" class="rim" d="M 186 355 Q 300 290 414 355 Q 300 420 186 355 Z"
+            fill="none" stroke="#9bbf00" stroke-width="3" />
+      <path id="crease" class="crease" d="M 190 356 Q 300 362 410 356"
+            fill="none" stroke="#7d9a00" stroke-width="3" stroke-linecap="round" opacity="1" />
+
+      <!-- invisible click target over the eye -->
+      <ellipse id="eyeHit" cx="300" cy="355" rx="124" ry="72"
+               fill="transparent" pointer-events="all" />
+    </svg>
+
+    <!-- ASCII rendering surface (toggled in settings) -->
+    <pre id="ascii" aria-hidden="true"></pre>
+
+    <!-- proximity "dread" red wash -->
+    <div id="dread"></div>
+
+    <p id="hint">move to wake &middot; click the eye to enter &middot; &#8984;&#8679;L settings</p>
+    <div class="gate-chrome" aria-hidden="true">
+      <span class="counter">0000666</span>
+      <span class="badge">Best viewed in Netscape Navigator @ 800&times;600</span>
+      <span class="webring">[ &#9668; INFOHAZARD WEBRING &#9658; ]</span>
+    </div>
+  </div>
+  <div class="crt-frame" aria-hidden="true"></div>
+
+  <!-- ASCII 0/1 explosion surface -->
+  <canvas id="boom" aria-hidden="true"></canvas>
+
+  <!-- ░░░ SETTINGS PANEL ░░░ -->
+  <div id="settings" class="panel" hidden role="dialog" aria-label="Settings"
+       aria-modal="false">
+    <div class="panel-bar">
+      <span class="panel-title">// SETTINGS</span>
+      <button id="closeSettings" class="x" type="button" aria-label="Close settings">&#10005;</button>
+    </div>
+    <label class="row" for="t-ascii"><span>ASCII render</span><input type="checkbox" id="t-ascii" /></label>
+    <label class="row" for="t-invert"><span>Invert colors</span><input type="checkbox" id="t-invert" /></label>
+    <label class="row" for="t-glow"><span>Triangle glow (lit void)</span><input type="checkbox" id="t-glow" /></label>
+    <label class="row" for="t-bio"><span>Biohazard symbol</span><input type="checkbox" id="t-bio" /></label>
+    <label class="row" for="t-infoi"><span>Info-&ldquo;i&rdquo; pupil</span><input type="checkbox" id="t-infoi" /></label>
+    <label class="row" for="t-explode"><span>Eye explodes (01 burst)</span><input type="checkbox" id="t-explode" /></label>
+    <p class="panel-foot">&#8984;&#8679;L toggle &middot; ESC to close</p>
+  </div>
+
+  <!-- ░░░ MAIN SITE (boilerplate) ░░░ -->
+  <main id="main" hidden>
+    <h1>The Last Psyop</h1>
+    <p class="sub">// boilerplate — the real site goes here</p>
+  </main>
+
+  <script src="main.js"></script>
+</body>
+</html>

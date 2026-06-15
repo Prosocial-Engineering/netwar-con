@@ -1,0 +1,395 @@
+:root { --dread: 0; color-scheme: light; }
+@font-face { font-family: 'LEDLIGHT'; src: url('assets/LEDLIGHT.otf') format('opentype'); font-display: swap; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+/* light root → the address-bar / overscroll gap on mobile blends with the page instead of
+   flashing a grey strip (it used to be dark, which showed on Safari/Chrome/DuckDuckGo). */
+html { background: #f4f2ea; }
+body { background: #f4f2ea; }
+/* EYE MODE: locked — no scroll, no overscroll/pull, no zoom, no text-select */
+body {
+  font: 400 17px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, sans-serif; color: #141008;
+  overflow: hidden; overscroll-behavior: none; touch-action: none;
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+}
+/* THE LAST PSYOP PAGE: scrolling re-enabled; light paper root so any overscroll / address-bar
+   gap blends with the paper body (the dark hero is covered by the fixed #revbg, which is dark). */
+html.revealed { background: #f4f0e7; overflow: visible; overscroll-behavior: none; }
+body.revealed {
+  height: auto; min-height: 100%; background: #f4f0e7;
+  overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none; touch-action: auto; -webkit-user-select: text; user-select: text;
+}
+#eyeHit { cursor: pointer; }
+#boom { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 80; pointer-events: none; display: none; }
+
+/* ░ THE EYE — inverted scheme: white world, solid yellow triangle w/ black line ░ */
+#hero {
+  min-height: 100vh; min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+  padding: 1rem 1rem calc(11vh + env(safe-area-inset-bottom, 0px));   /* room at the bottom for the heart, above the gesture bar */
+  background: #f4f2ea; transition: opacity 1s ease;
+}
+#hazard { width: min(92vw, 88vh, 660px); height: auto; flex: none; position: relative; z-index: 1; will-change: transform; }
+.tri { fill: #f2dd00; stroke: #0c0c0c; stroke-width: 14; transition: opacity .9s ease; }
+.rim { stroke: #0c0c0c; stroke-width: 7; }
+.crease { stroke: #0c0c0c; stroke-width: 7; stroke-linecap: round; }   /* the closed-lid line */
+#scleraE { fill: #f2dd00; }                                            /* eye blends into the sign… */
+#hi { fill: #fff7c0; opacity: .85; }
+body.blessed .tri { opacity: 0; }
+
+/* proximity red wash (normal blend so it tints the white) */
+#dread {
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; z-index: 3; opacity: var(--dread, 0);
+  background: radial-gradient(ellipse 60% 50% at center, rgba(255,16,0,.45), rgba(190,0,0,.16) 50%, transparent 72%);
+}
+
+/* ░ pinned credit + draggable heart ░ */
+.credit {
+  position: fixed; left: 0; right: 0; z-index: 85; margin: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 26px);   /* lifted clear of the OS edge-gesture zone */
+  padding: 10px; text-align: center;
+  color: #6a6052; font: 600 14px ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .04em;
+}
+#heart { display: inline-block; vertical-align: -.06em; touch-action: none; user-select: none; }
+#heart.dragging {
+  position: fixed; z-index: 90; margin: 0; font-size: 52px; line-height: 1;
+  transform: translate(-50%, -50%); filter: drop-shadow(0 0 16px rgba(255,90,160,.85));
+}
+.sparkle { position: fixed; pointer-events: none; z-index: 88; transform: translate(-50%,-50%); will-change: transform, opacity; animation: spark .7s ease-out forwards; }
+@keyframes spark {
+  from { opacity: 1; transform: translate(-50%,-50%) scale(1) rotate(0); }
+  to   { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.3) rotate(35deg); }
+}
+
+/* ░ THE REVEAL — The Last Psyop · classic & elegant, war-room ░ */
+:root {
+  --serif: 'Cormorant Garamond', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --body: 'EB Garamond', 'Iowan Old Style', Palatino, Georgia, 'Times New Roman', serif;
+  --ink: #e9dcc0;        /* warm parchment  — text on the dark photo hero */
+  --ink-dim: #c2b491;    /* muted parchment */
+  --gold: #c6a24e;       /* antique gold */
+  --gold-bright: #e6cb83;
+  --paper: #f4f0e7;      /* warm off-white — the body below the hero */
+  --ink2: #1d1916;       /* near-black warm — body text */
+  --ink2-soft: #6f6358;  /* muted brown-grey — secondary text */
+  --wood: #a14d18;       /* dark wooden orange — separators & accents */
+  --wood-deep: #7a380f;
+}
+/* fixed video backdrop — it stays pinned (the loop "sticks") behind the hero; the opaque
+   sections below scroll up over it, so the video gets left behind as you scroll. */
+#revbg { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 0; display: none; overflow: hidden; background-color: #0a0704; }
+body.revealed #revbg { display: block; }
+#revvid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+/* darkening wash on top of the video so the hero title/copy stay readable */
+#revbg::after {
+  content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none;
+  background:
+    radial-gradient(125% 100% at 50% 34%, rgba(12,8,3,.34), rgba(8,5,2,.9) 92%),
+    linear-gradient(rgba(11,8,3,.5), rgba(8,6,3,.86));
+}
+#reveal {
+  position: relative; z-index: 1; opacity: 0; transition: opacity 1.1s ease;
+  color: var(--ink); font-family: var(--body); line-height: 1.8; font-weight: 400;
+}
+#reveal.show { opacity: 1; }
+.rev-inner { max-width: 680px; margin: 0 auto; }
+
+/* ── LANDING / HERO: transparent so the pinned photo shows through ──
+   everything is sized so the whole block always fits one screen before the scroll: the title is
+   capped in vh (so 3 lines can't eat a short screen) and the gaps are vh-aware, while the bottom
+   padding keeps the button clear of the scroll cue + the pinned "Made with ♥" credit. */
+.lp-hero {
+  position: relative; min-height: 100vh; min-height: 100dvh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+  padding: max(3vh, 1rem) 1.25rem calc(max(4.5vh, 2.75rem) + env(safe-area-inset-bottom, 0px));
+}
+.lp-hero__inner { max-width: 780px; width: 100%; }
+/* the one neon focal point — kept, but the glow is softened to read as a tasteful sign.
+   on desktop the size is capped in vh so the whole hero (incl. the Apply button) fits one screen. */
+.lp-title {
+  margin: 0 auto;
+  font-family: 'LEDLIGHT', ui-monospace, monospace; font-weight: 400; line-height: 1.04;
+  font-size: min(clamp(46px, 12.5vw, 184px), 18vh); letter-spacing: .01em; overflow-wrap: break-word;
+  color: #ffbe4d;
+  text-shadow: 0 0 8px rgba(255,150,40,.45), 0 0 26px rgba(255,120,0,.28), 0 0 64px rgba(255,100,0,.16);
+}
+.lp-event {
+  font-family: var(--serif); font-weight: 600; font-size: clamp(16px, 3vw, 25px);
+  letter-spacing: .4em; text-indent: .4em; text-transform: uppercase;
+  margin: clamp(1rem, 2.8vh, 1.9rem) 0 .5rem; color: #e7bf6a;
+  text-shadow: 0 2px 16px rgba(0,0,0,.7), 0 0 3px rgba(0,0,0,.5);
+}
+.lp-tagline {
+  font-family: var(--body); font-style: italic; font-size: clamp(16px, 2.5vw, 22px);
+  color: #f3e7cb; margin: .4rem auto 0; max-width: 36ch; line-height: 1.5;
+  text-shadow: 0 2px 16px rgba(0,0,0,.78), 0 0 2px rgba(0,0,0,.5);
+}
+.lp-dates {
+  font-family: var(--serif); font-weight: 500; font-size: clamp(12px, 1.7vw, 15px);
+  letter-spacing: .3em; text-indent: .3em; text-transform: uppercase;
+  color: #d8c79e; margin: clamp(1rem, 2.6vh, 1.7rem) 0 0; text-shadow: 0 2px 14px rgba(0,0,0,.75);
+}
+.lp-dates::before {
+  content: ""; display: block; width: 48px; height: 1px; margin: 0 auto clamp(.8rem, 1.8vh, 1.3rem);
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.lp-cue { position: absolute; bottom: calc(2.6vh + env(safe-area-inset-bottom, 0px)); font-size: 1rem; color: rgba(198,162,78,.6); animation: cue 2s ease-in-out infinite; }
+@keyframes cue { 0%,100% { transform: translateY(0); opacity: .45; } 50% { transform: translateY(6px); opacity: .95; } }
+/* short / landscape screens: shrink the title further and drop the cue so nothing collides */
+@media (max-height: 680px) {
+  .lp-title { font-size: min(clamp(40px, 11vw, 150px), 20vh); }
+  .lp-event { font-size: clamp(15px, 2.6vw, 20px); margin-top: .9rem; }
+  .lp-tagline { font-size: clamp(15px, 2.2vw, 18px); }
+  .lp-cue { display: none; }
+}
+#reveal .apply {
+  display: inline-block; margin-top: clamp(1.4rem, 3vh, 2.2rem); padding: .68rem 2.1rem;
+  font-family: var(--serif); font-weight: 600; font-size: .92rem;
+  letter-spacing: .24em; text-indent: .24em; text-transform: uppercase;
+  color: var(--gold-bright); background: rgba(20,14,6,.42);
+  border: 1px solid rgba(220,184,110,.7); border-radius: 1px;
+  text-decoration: none; text-shadow: 0 1px 8px rgba(0,0,0,.55);
+  transition: background .28s ease, color .28s ease, border-color .28s ease;
+}
+#reveal .apply:hover { background: rgba(198,162,78,.92); color: #18110a; border-color: var(--gold); text-shadow: none; }
+
+/* ── THE BLURRED SEAM: the fixed war-room photo blurs + lightens into the paper as this
+   scrolls over it (graduated blur via a masked backdrop-filter; gradient does the lightening) ── */
+.lp-veil { position: relative; z-index: 1; height: 40vh; margin-bottom: -1px; pointer-events: none; }
+.lp-veil::before {
+  content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 70%);
+          mask-image: linear-gradient(to bottom, transparent 0%, #000 70%);
+}
+.lp-veil::after {
+  content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+  background: linear-gradient(to bottom, rgba(244,240,231,0) 0%, rgba(244,240,231,.6) 50%, var(--paper) 100%);
+}
+
+/* ── OFF-WHITE PAPER BODY: one continuous orange graph-paper sheet, opaque (covers the photo);
+   the grid lives on ::before so it can fade in at the top (soft seam) and sit behind the text ── */
+.lp-paper { position: relative; z-index: 1; background-color: var(--paper); }
+/* vertical rhythm: one grid cell (--u) == the body line-height, and every vertical dimension below
+   is a whole multiple of --u, so every line of text lands on a rule (ruled-paper effect), down to
+   the footer. --gy nudges the horizontal rules so they sit right under the text baselines. */
+.lp-paper { --u: 27px; --gy: 7px; }
+.lp-paper::before {
+  content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(161,77,24,.08) 1px, transparent 1px),          /* minor — horizontal */
+    linear-gradient(90deg, rgba(161,77,24,.08) 1px, transparent 1px),   /* minor — vertical */
+    linear-gradient(rgba(161,77,24,.16) 1px, transparent 1px),          /* major — horizontal */
+    linear-gradient(90deg, rgba(161,77,24,.16) 1px, transparent 1px);   /* major — vertical */
+  background-size: 27px 27px, 27px 27px, 135px 135px, 135px 135px;
+  background-position: 0 var(--gy), 0 0, 0 var(--gy), 0 0;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 7vh);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 7vh);
+}
+/* paper-grain texture over the paper + grid (behind all text/assets): tiled, low-opacity, multiplied
+   so only the creases darken, and lightly blurred to soften the tile seams */
+.lp-paper::after {
+  content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; z-index: 0;
+  background-image: url('assets/paper.jpg'); background-size: 600px auto; background-repeat: repeat;
+  opacity: .5; mix-blend-mode: multiply; filter: blur(.6px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 7vh);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 7vh);
+}
+.lp-section { position: relative; z-index: 1; background: transparent; color: var(--ink2); padding: 108px 1.5rem; }
+.lp-copy { padding-top: 81px; }
+.lp-hosts { padding-bottom: 54px; }
+.lp-players { padding-top: 54px; padding-bottom: 54px; }
+
+/* slim dark-wooden-orange separator with a small centred diamond (margins, not flex-gap, so it
+   works on every engine; a static width fallback precedes the clamp) */
+.lp-rule { display: flex; align-items: center; justify-content: center; height: 27px; margin: 0 0 54px; }
+.lp-rule::before, .lp-rule::after { content: ""; height: 2px; width: 70px; width: clamp(44px, 13vw, 96px); border-radius: 2px; background: linear-gradient(90deg, transparent, var(--wood)); }
+.lp-rule::after { background: linear-gradient(90deg, var(--wood), transparent); }
+.lp-rule i { width: 7px; height: 7px; margin: 0 1.1rem; background: var(--wood); transform: rotate(45deg); border-radius: 1px; flex: none; }
+
+#reveal blockquote { margin: 0; padding: 0; color: var(--ink2); font-size: 18px; line-height: 27px; }
+#reveal blockquote p { margin: 0 0 27px; }
+#reveal blockquote p:first-of-type::first-letter {
+  float: left; font-family: var(--serif); font-weight: 600; font-size: 50px; line-height: 54px;
+  padding: 0 .12em 0 0; color: var(--wood);
+}
+#reveal a { color: var(--wood); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; text-decoration-color: rgba(161,77,24,.4); transition: color .2s, text-decoration-color .2s; }
+#reveal a:hover { color: var(--wood-deep); text-decoration-color: var(--wood); }
+
+/* ── HOSTS · LIVE PLAYERS ── */
+.hosts-title {
+  text-align: center; font-family: var(--serif); font-weight: 600;
+  font-size: clamp(15px, 2.2vw, 20px); line-height: 27px; letter-spacing: .42em; text-indent: .42em;
+  text-transform: uppercase; color: var(--wood); margin: 0 0 54px;
+}
+/* margins (not flex-gap) for spacing so it works on every engine */
+.hosts-grid { display: flex; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
+.host { width: 150px; max-width: 42vw; margin: 0 20px 8px; text-align: center; }
+/* circular pfp — the padding-bottom hack makes a guaranteed square (then a circle) on EVERY
+   browser, even ones without `aspect-ratio`; the square source fills it via object-fit: cover */
+.host__photo {
+  position: relative; width: 100%; height: 0; padding-bottom: 100%;
+  border-radius: 50%; overflow: hidden;
+  background: #e7e0d2; border: 1px solid rgba(161,77,24,.32);
+  box-shadow: 0 10px 26px rgba(60,30,8,.18), 0 0 0 5px rgba(161,77,24,.07);
+}
+.host__photo img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.host figcaption { display: flex; flex-direction: column; gap: 0; margin-top: 27px; }
+.host__name { font-family: var(--serif); font-weight: 600; font-size: 1.2rem; line-height: 27px; color: var(--ink2); letter-spacing: .01em; }
+.host__role { font-family: var(--body); font-style: italic; font-size: .92rem; line-height: 27px; color: var(--ink2-soft); }
+.host__handle { font-family: var(--body); font-style: italic; font-size: .95rem; line-height: 27px; color: var(--wood) !important; text-decoration: none !important; }
+.host__handle:hover { color: var(--wood-deep) !important; }
+
+body.revealed { background: var(--paper); }
+/* on the psyop page the heart is no longer a mechanic — hide the always-on pinned credit; the
+   footer credit at the very bottom (linking to lovepill.ai) is only seen once you scroll there */
+body.revealed .credit { display: none; }
+/* background-muzak toggle — fixed top-right, only on The Last Psyop page; elegant frosted pill */
+.bgm-toggle {
+  position: fixed; top: calc(env(safe-area-inset-top, 0px) + 14px); right: 14px; z-index: 95;
+  width: 42px; height: 42px; display: none; align-items: center; justify-content: center; padding: 0;
+  border: 1px solid rgba(161,77,24,.4); border-radius: 50%; cursor: pointer; color: var(--wood);
+  background: rgba(244,240,231,.72); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px rgba(60,30,8,.16); transition: color .2s, border-color .2s, transform .15s ease;
+}
+body.revealed .bgm-toggle { display: flex; }
+.bgm-toggle:hover { border-color: var(--wood); transform: scale(1.07); }
+.bgm-toggle svg { width: 21px; height: 21px; display: block; }
+.bgm-toggle .bgm-slash { display: none; }
+.bgm-toggle.is-off { color: var(--ink2-soft); }
+.bgm-toggle.is-off .bgm-slash { display: block; }
+/* ── FEATURE VIDEO (bottom) — custom controls over a framed 16:9 player ── */
+.lp-video { padding-top: 54px; padding-bottom: 81px; }
+/* padding-bottom hack keeps the 16:9 frame from collapsing on engines without `aspect-ratio` */
+.vfeature {
+  position: relative; width: 100%; max-width: 760px; margin: 0 auto;
+  border-radius: 4px; overflow: hidden; background: #15100a; cursor: pointer;
+  box-shadow: 0 18px 50px rgba(60,30,8,.28), 0 0 0 1px rgba(161,77,24,.25);
+}
+/* the aspect hack lives on an inner box so the 56.96% resolves against .vfeature's CAPPED width
+   (760px), not the wide section — otherwise it computed a near-square / vertical frame on laptops */
+.vfeature__media { position: relative; width: 100%; height: 0; padding-bottom: 56.96%; }   /* 720 / 1264 → 16:9 */
+.vfeature__vid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.vfeature__center, .vfeature__mute {
+  position: absolute; border: none; cursor: pointer; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(20,12,4,.5); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  transition: opacity .25s ease, background .2s ease, transform .12s ease;
+}
+.vfeature__center:hover, .vfeature__mute:hover { background: rgba(161,77,24,.85); }
+/* centre play/pause */
+.vfeature__center { top: 50%; left: 50%; transform: translate(-50%, -50%); width: 76px; height: 76px; border-radius: 50%; opacity: .92; }
+.vfeature__center:active { transform: translate(-50%, -50%) scale(.94); }
+.vfeature.is-playing .vfeature__center { opacity: 0; }
+.vfeature.is-playing:hover .vfeature__center { opacity: .92; }
+.vfeature__center .vf-ic { width: 30px; height: 30px; }
+.vf-ic--play { margin-left: 3px; }   /* optically centre the triangle */
+/* bottom-left mute (≥44px touch target) */
+.vfeature__mute { left: 14px; bottom: 24px; width: 44px; height: 44px; border-radius: 50%; }
+.vfeature__mute .vf-ic { width: 20px; height: 20px; }
+/* touch devices don't hover, so keep the centre pause affordance visible while playing */
+@media (hover: none) { .vfeature.is-playing .vfeature__center { opacity: .5; } }
+/* icons swap by state */
+.vf-ic { fill: currentColor; }
+.vf-ic--pause, .vf-ic--off { display: none; }
+.vfeature.is-playing .vf-ic--play { display: none; }
+.vfeature.is-playing .vf-ic--pause { display: block; }
+.vfeature.is-muted .vf-ic--on { display: none; }
+.vfeature.is-muted .vf-ic--off { display: block; }
+/* scrub bar — click / drag to seek back and forth */
+.vfeature__bar { position: absolute; left: 0; right: 0; bottom: 0; height: 18px; display: flex; align-items: flex-end; padding: 0 12px 4px; cursor: pointer; touch-action: none; }
+.vfeature__track { position: relative; width: 100%; height: 4px; border-radius: 3px; background: rgba(255,255,255,.25); transition: height .15s ease; }
+.vfeature__bar:hover .vfeature__track { height: 6px; }
+.vfeature__played { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; background: var(--wood); }
+.vfeature__played::after { content: ""; position: absolute; right: -5px; top: 50%; width: 10px; height: 10px; border-radius: 50%; background: var(--wood); transform: translateY(-50%) scale(0); transition: transform .15s ease; }
+.vfeature__bar:hover .vfeature__played::after { transform: translateY(-50%) scale(1); }
+/* elegant "source" caption under the video */
+.vfeature__src { text-align: center; margin: 1.1rem 0 0; }
+.vfeature__src a { font: italic 400 .92rem/1 var(--body); letter-spacing: .04em; color: var(--ink2-soft); text-decoration: none; border-bottom: 1px solid rgba(161,77,24,.4); padding-bottom: 1px; transition: color .2s, border-color .2s; }
+.vfeature__src a:hover { color: var(--wood); border-color: var(--wood); }
+
+/* ── PROSOCIAL emblem — transparent logo, centred on the graph paper, below the video ── */
+.lp-emblem { padding-top: 27px; padding-bottom: 54px; text-align: center; }
+.lp-emblem__link {
+  position: relative; display: inline-block; cursor: pointer; outline: none;
+  transition: transform .35s cubic-bezier(.2,.7,.2,1);
+}
+.lp-emblem__link:hover, .lp-emblem__link:focus-visible { transform: scale(1.03); }
+.lp-emblem__link:active { transform: scale(1.01); }
+.lp-emblem__img {
+  display: block; width: 72%; max-width: 360px; height: auto; margin: 0 auto; vertical-align: middle;
+}
+/* glossy "card" sheen — a diagonal highlight clipped to the logo shape that sweeps across on hover */
+.lp-emblem__link::after {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; opacity: 0;
+  background: linear-gradient(115deg, rgba(255,255,255,0) 38%, rgba(255,255,255,.5) 47%, rgba(255,255,255,.92) 50%, rgba(255,255,255,.5) 53%, rgba(255,255,255,0) 62%);
+  background-size: 250% 250%; background-position: 160% 160%;
+  -webkit-mask-image: url('assets/prosocial.png'); mask-image: url('assets/prosocial.png');
+  -webkit-mask-size: contain; mask-size: contain;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-position: center; mask-position: center;
+}
+.lp-emblem__link:hover::after, .lp-emblem__link:focus-visible::after { animation: emblemSheen 1s ease-out; }
+@keyframes emblemSheen {
+  0%   { opacity: 0; background-position: 160% 160%; }
+  12%  { opacity: 1; }
+  100% { opacity: 0; background-position: -60% -60%; }
+}
+
+/* the 108px keeps the credit clear of mobile bottom toolbars (Safari/Chrome/DuckDuckGo); the
+   safe-area inset clears the home indicator. env() needs the viewport-fit=cover meta (set). */
+.lp-footer { position: relative; z-index: 1; text-align: center; padding: 54px 1.5rem calc(108px + env(safe-area-inset-bottom, 0px)); }
+.lp-footer a { font: italic 400 14px/27px var(--body); letter-spacing: .08em; color: var(--ink2-soft); text-decoration: none; transition: color .2s; }
+.lp-footer a:hover { color: var(--wood); }
+.lp-footer .lp-heart { font-style: normal; color: #c01e54; }
+
+/* ── PHONES: tighten the paper spacing (kept on 27px multiples so the rules still line up) and
+   give the bottom breathing room so nothing tucks under a mobile browser toolbar ── */
+@media (max-width: 640px) {
+  .lp-section { padding: 81px 1.25rem; }
+  .lp-copy { padding-top: 54px; }
+  .lp-hosts { padding-bottom: 27px; }
+  .lp-players { padding-top: 54px; padding-bottom: 54px; }
+  .lp-video { padding-top: 27px; padding-bottom: 54px; }
+  .lp-footer { padding: 54px 1.25rem calc(81px + env(safe-area-inset-bottom, 0px)); }
+  .lp-rule { margin-bottom: 27px; }
+  .hosts-title { margin-bottom: 27px; }
+  /* keep the three portraits on one row but small enough to fit the narrow viewport */
+  .host { width: 25vw; min-width: 64px; max-width: 100px; margin: 0 6px 4px; }
+  .host figcaption { margin-top: 16px; }
+  .host__name { font-size: .82rem; line-height: 22px; }
+  .host__role, .host__handle { font-size: .72rem; line-height: 20px; }
+  /* wide letter-spacing overflows a phone — pull the tracked labels in so they don't clip */
+  .lp-event { letter-spacing: .2em; text-indent: .2em; font-size: clamp(15px, 3.4vw, 20px); margin-top: 1.1rem; }
+  .lp-dates { letter-spacing: .12em; text-indent: .12em; }
+  .vfeature__center { width: 64px; height: 64px; }
+  .vfeature__center .vf-ic { width: 26px; height: 26px; }
+  /* the blurred photo→paper seam is shorter on a phone so it doesn't eat the screen */
+  .lp-veil { height: 32vh; }
+  .lp-emblem__img { width: 66%; max-width: 230px; }
+
+  /* ── HERO on phones: a BIG title filling the top third, a compact button in the bottom
+     third — distribute them (space-between) instead of bunching everything in the middle ── */
+  .lp-hero {
+    justify-content: space-between;
+    padding: max(5vh, 1.5rem) 1.25rem calc(max(13vh, 5.5rem) + env(safe-area-inset-bottom, 0px));
+  }
+  .lp-title { font-size: min(22vw, 30vh); }
+  #reveal .apply {
+    margin-top: 0; padding: .5rem 1.45rem; font-size: .76rem;
+    letter-spacing: .14em; text-indent: .14em;
+  }
+}
+
+/* flat iris (default): solid yellow disc with a black outline, no reflection */
+#irisC { fill: #f2dd00; stroke: #0c0c0c; stroke-width: 6; }
+#hi { display: none; }
+
+/* tapping the eye: it flares RED and the info-"i" lights up before the rabbit hole */
+body.alarm #irisC { fill: #ff1500; stroke: #2a0000; transition: fill .12s; }
+body.alarm #pupil { fill: #000; }
+body.alarm #gaze  { filter: drop-shadow(0 0 12px #ffe000) drop-shadow(0 0 30px #ff3000) drop-shadow(0 0 60px rgba(255,60,0,.7)) !important; }
+body.alarm #dread { opacity: .9 !important; }
+
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; } }

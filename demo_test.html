@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light" />
+  <title>INFOHAZARD — symbol position tuner</title>
+  <link rel="stylesheet" href="demo.css" />
+  <style>
+    /* ── tuner panel (dev tool) ── */
+    #tuner {
+      position: fixed; top: 16px; left: 16px; z-index: 200; display: none; width: 280px;
+      background: rgba(20,16,8,.93); color: #f4eede; padding: 16px 18px; border-radius: 10px;
+      font: 13px/1.5 ui-monospace, "SF Mono", Menlo, monospace; box-shadow: 0 12px 44px rgba(0,0,0,.55);
+      -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+    }
+    #tuner.open { display: block; }
+    #tuner h3 { margin: 0 0 4px; font-size: 12px; letter-spacing: .12em; color: #ffcf6a; }
+    #tuner label { display: block; margin: 12px 0 2px; color: #d8c79e; }
+    #tuner input[type=range] { width: 100%; accent-color: #ffae2a; }
+    #tuner .val { float: right; color: #ffcf6a; }
+    #tuner .row { display: flex; gap: 8px; margin-top: 12px; }
+    #tuner button { flex: 1; background: #2a2010; color: #ffcf6a; border: 1px solid #5a4a20; border-radius: 5px; padding: 7px; cursor: pointer; font: inherit; }
+    #tuner button.on { background: #ffae2a; color: #1a1206; }
+    #readout { margin-top: 12px; padding: 9px 10px; background: #110d05; border-radius: 6px; color: #fff4d8; user-select: all; font-size: 13px; }
+    #tuner .hint { margin-top: 10px; color: #9a8a66; font-size: 11px; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <main id="hero">
+    <svg id="hazard" viewBox="0 0 600 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="symbol tuner">
+      <defs>
+        <radialGradient id="iris" cx="50%" cy="48%" r="52%">
+          <stop id="s0" offset="0%" stop-color="#fffbd0" /><stop id="s1" offset="34%" stop-color="#f2dd00" />
+          <stop id="s2" offset="72%" stop-color="#a07a00" /><stop id="s3" offset="100%" stop-color="#3a2a00" />
+        </radialGradient>
+        <radialGradient id="sclera" cx="50%" cy="50%" r="60%">
+          <stop offset="0%" stop-color="#16160f" /><stop offset="100%" stop-color="#050504" />
+        </radialGradient>
+        <clipPath id="eyeClip" clipPathUnits="userSpaceOnUse"><path d="M 215 355 Q 300 281 385 355 Q 300 429 215 355 Z" /></clipPath>
+        <mask id="iMask" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse">
+          <rect x="246" y="301" width="108" height="108" fill="#fff" />
+          <circle cx="300" cy="346.5" r="3.4" fill="#000" />
+          <rect x="296.8" y="351.5" width="6.4" height="14" rx="3.2" fill="#000" />
+        </mask>
+      </defs>
+      <polygon id="triangle" class="tri" points="300,46 542,498 58,498" fill="none" stroke="#eaff00" stroke-width="14" stroke-linejoin="round" />
+      <g clip-path="url(#eyeClip)">
+        <g id="lid">
+          <ellipse id="scleraE" cx="300" cy="355" rx="120" ry="68" fill="url(#sclera)" />
+          <g id="gaze">
+            <circle id="irisC" cx="300" cy="355" r="47" fill="url(#iris)" />
+            <circle id="pupil" cx="300" cy="355" r="20" fill="#040403" mask="url(#iMask)" />
+            <circle id="hi" cx="285" cy="340" r="7.5" fill="#fffbe6" opacity="0.8" />
+          </g>
+        </g>
+      </g>
+      <path id="rim" class="rim" d="M 215 355 Q 300 281 385 355 Q 300 429 215 355 Z" fill="none" stroke="#9bbf00" stroke-width="3" />
+      <path id="crease" class="crease" d="M 222 356 Q 300 361 378 356" fill="none" stroke="#7d9a00" stroke-width="3" stroke-linecap="round" />
+      <!-- the symbol being tuned (centred on its real rendered bounds) -->
+      <text id="flipSym" x="300" y="342" text-anchor="middle" font-size="248" fill="#0c0c0c">&#9763;</text>
+    </svg>
+  </main>
+
+  <div id="tuner">
+    <h3>SYMBOL POSITION TUNER</h3>
+    <label>Horizontal&nbsp;X <span class="val" id="vx">300</span></label>
+    <input id="rx" type="range" min="220" max="380" value="300" step="1" />
+    <label>Vertical&nbsp;Y <span class="val" id="vy">342</span></label>
+    <input id="ry" type="range" min="280" max="430" value="342" step="1" />
+    <label>Size <span class="val" id="vs">248</span></label>
+    <input id="rs" type="range" min="120" max="340" value="248" step="2" />
+    <div class="row">
+      <button id="bBio" class="on">&#9763; bio</button>
+      <button id="bRad">&#9762; rad</button>
+      <button id="bEye">&#128065; eye</button>
+    </div>
+    <div id="readout">SYM_CX 298 · SYM_CY 305 · SYM_SIZE 334</div>
+    <div class="hint">⌘/Ctrl + Shift + L toggles this panel. Drag the sliders until the symbol sits where you want, then send me the line in the box above.</div>
+  </div>
+
+  <script>
+    const fs = document.getElementById('flipSym');
+    const rx = document.getElementById('rx'), ry = document.getElementById('ry'), rs = document.getElementById('rs');
+    const vx = document.getElementById('vx'), vy = document.getElementById('vy'), vs = document.getElementById('vs');
+    const readout = document.getElementById('readout');
+    const bBio = document.getElementById('bBio'), bRad = document.getElementById('bRad'), bEye = document.getElementById('bEye');
+    const eyeVis = [document.querySelector('g[clip-path="url(#eyeClip)"]'), document.getElementById('rim'), document.getElementById('crease')].filter(Boolean);
+
+    // per-mode state — defaults are the values dialed in so far (eye size is a scale %, native = 100)
+    const MODES = {
+      bio: { kind: 'sym', sym: '☣', x: 298, y: 305, size: 334, xr: [220, 380], yr: [260, 430], sr: [120, 360], step: 2 },
+      rad: { kind: 'sym', sym: '☢', x: 301, y: 328, size: 340, xr: [220, 380], yr: [260, 430], sr: [120, 360], step: 2 },
+      eye: { kind: 'eye',           x: 300, y: 355, size: 137, xr: [200, 400], yr: [260, 440], sr: [40, 220], step: 1 },
+    };
+    let mode = 'bio';
+
+    function render() {
+      const m = MODES[mode];
+      vx.textContent = m.x; vy.textContent = m.y; vs.textContent = m.size + (m.kind === 'eye' ? '%' : '');
+      if (m.kind === 'sym') {
+        fs.style.display = ''; fs.textContent = m.sym;
+        fs.setAttribute('font-size', m.size); fs.setAttribute('x', m.x); fs.setAttribute('y', m.y);
+        try { const bb = fs.getBBox(); fs.setAttribute('y', (m.y + (m.y - (bb.y + bb.height / 2))).toFixed(1)); } catch (e) {}
+        eyeVis.forEach((el) => el.removeAttribute('transform'));     // eye at native size
+        readout.textContent = 'SYM_CX ' + m.x + ' · SYM_CY ' + m.y + ' · SYM_SIZE ' + m.size;
+      } else {
+        fs.style.display = 'none';
+        const s = m.size / 100;
+        eyeVis.forEach((el) => el.setAttribute('transform', 'translate(' + m.x + ' ' + m.y + ') scale(' + s.toFixed(3) + ') translate(-300 -355)'));
+        readout.textContent = 'EYE_CX ' + m.x + ' · EYE_CY ' + m.y + ' · EYE_SCALE ' + m.size + '%';
+      }
+    }
+    function syncSliders() {
+      const m = MODES[mode];
+      rx.min = m.xr[0]; rx.max = m.xr[1]; rx.value = m.x;
+      ry.min = m.yr[0]; ry.max = m.yr[1]; ry.value = m.y;
+      rs.min = m.sr[0]; rs.max = m.sr[1]; rs.step = m.step; rs.value = m.size;
+    }
+    rx.oninput = ry.oninput = rs.oninput = () => { const m = MODES[mode]; m.x = +rx.value; m.y = +ry.value; m.size = +rs.value; render(); };
+    function pick(newMode, btn) { mode = newMode; [bBio, bRad, bEye].forEach((b) => b.classList.remove('on')); btn.classList.add('on'); syncSliders(); render(); }
+    bBio.onclick = () => pick('bio', bBio);
+    bRad.onclick = () => pick('rad', bRad);
+    bEye.onclick = () => pick('eye', bEye);
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'l' || e.key === 'L')) {
+        e.preventDefault(); document.getElementById('tuner').classList.toggle('open');
+      }
+    });
+    syncSliders(); render();
+    document.getElementById('tuner').classList.add('open');   // start open so it's discoverable
+  </script>
+</body>
+</html>

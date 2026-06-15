@@ -267,7 +267,10 @@
   function puzzle(i) { if (!soundOn) return; try { const a = PUZZLE[i]; if (a) { a.currentTime = 0; a.play().catch(() => {}); } } catch (e) {} }
 
   // (d) the OPENING: large hazard symbols flip in the CENTRE of the triangle — ☣ → ☢ → eye (the 3rd flip)
-  const eyeVis = [hazard.querySelector('g[clip-path="url(#eyeClip)"]'), $('rim'), $('crease')].filter(Boolean);
+  // NB: the crease (closed-lid line) is NOT in here — its opacity is openness-driven and managed only
+  // by tick() (it's hidden while the eye is open). Including it let the flip's opacity='1' reveal force
+  // it visible, which the new change-detection then never re-hid → a stray line across the open eye.
+  const eyeVis = [hazard.querySelector('g[clip-path="url(#eyeClip)"]'), $('rim')].filter(Boolean);
   // On a Back / bfcache return we hard-reload to a guaranteed-clean eye (see the pageshow handler far
   // below). Skip the opening flip on THAT reload so the return lands straight on the resting, clickable
   // eye instead of replaying the ~2s intro every time you come back from a rabbit hole.
@@ -276,7 +279,7 @@
   let spinning = !skipFlip;   // play the ☣ → ☢ → eye opening flip by default; skip it on a bfcache reload
   const EYE_CX = 300, EYE_CY = 355;                  // the pupil / eye centre (the flip lands here)
   const SYM_FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif";
-  const SYM_TARGET = 296;                            // the symbol's larger side, in viewBox units (fits the triangle)
+  const SYM_TARGET = 230;                            // the symbol's larger side, in viewBox units (sits inside the triangle, ~eye size)
   // The flip symbols are PRE-RASTERISED to a bitmap and shown as an <image>, NOT a live emoji <text>.
   // Why: ☣/☢ are emoji glyphs that every engine seats at a different vertical offset, and centring the
   // <text> by measuring the ink on a canvas only works if canvas and SVG render the glyph identically —
@@ -295,7 +298,7 @@
     if (_glyphCache[ch]) return _glyphCache[ch];
     let out = { url: '', w: 1, h: 1 };
     try {
-      const PX = 384;
+      const PX = 1024;          // render big, then crop to ink + downscale to display size → crisp (was 384 → upscaled → pixelated)
       const cv = document.createElement('canvas'); cv.width = cv.height = PX;
       const ctx = cv.getContext('2d');
       ctx.font = Math.round(PX * 0.8) + 'px ' + SYM_FONT;

@@ -163,7 +163,10 @@
       return;
     }
     _aiBless = false;
-    const ct = Math.min(1, t), ctR = Math.round(ct * 256) / 256;
+    // quantise to 64 steps (not 256): re-rendering the iris radialGradient + drop-shadow on every
+    // hair-fine intensity step is the per-frame cost while the cursor approaches; 64 shades is still
+    // perfectly smooth but updates the gradient/filter ~4× less often (headroom for slower GPUs).
+    const ct = Math.min(1, t), ctR = Math.round(ct * 64) / 64;
     if (ctR !== _aiCt) {                                       // iris colour + pupil + glow only move with intensity
       _aiCt = ctR;
       for (let i = 0; i < 4; i++) irisStops[i].setAttribute('stop-color', toHex(mix(COOL[i], HOT[i], ctR)));
@@ -171,7 +174,7 @@
       gaze.style.filter = `drop-shadow(0 0 ${(6 + ctR * 22).toFixed(0)}px ${toHex(mix(GLOW_COOL, GLOW_HOT, ctR))})`;
     }
     if (!busy) {   // proximity glow; while busy (the click pulse) the pulse owns the red via style.opacity
-      const roR = Math.round(Math.min(0.85, t * 0.6 + (dragging ? 0.18 : 0)) * 256) / 256;
+      const roR = Math.round(Math.min(0.85, t * 0.6 + (dragging ? 0.18 : 0)) * 64) / 64;
       if (roR !== _aiRed) { _aiRed = roR; redTri.style.opacity = ''; redTri.setAttribute('opacity', roR.toFixed(3)); }
     }
     const j = t * t * 10 + (dragging ? 6 : 0);     // shakier while the heart is held
@@ -272,53 +275,55 @@
   try { if (sessionStorage.getItem('psyop:skipflip')) { skipFlip = true; sessionStorage.removeItem('psyop:skipflip'); } } catch (e) {}
   let spinning = !skipFlip;   // play the ☣ → ☢ → eye opening flip by default; skip it on a bfcache reload
   const EYE_CX = 300, EYE_CY = 355;                  // the pupil / eye centre (the flip lands here)
-  // per-glyph size; the ink is centred on (cx, cy) by canvas measurement in setFace, so we aim the
-  // ink centre right at the eye centre (EYE_CX/EYE_CY) — the flip then lands exactly on the eye.
-  const SYM_CFG = {
-    '☣': { cx: EYE_CX, cy: EYE_CY, size: 334 },
-    '☢': { cx: EYE_CX, cy: EYE_CY, size: 340 },
-  };
   const SYM_FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif";
-  const flipSym = document.createElementNS(SVGNS, 'text');
+  const SYM_TARGET = 296;                            // the symbol's larger side, in viewBox units (fits the triangle)
+  // The flip symbols are PRE-RASTERISED to a bitmap and shown as an <image>, NOT a live emoji <text>.
+  // Why: ☣/☢ are emoji glyphs that every engine seats at a different vertical offset, and centring the
+  // <text> by measuring the ink on a canvas only works if canvas and SVG render the glyph identically —
+  // on real Firefox they don't, so the bottom kept getting clipped by the viewBox. Drawing the glyph to
+  // a canvas, cropping to its real ink, and displaying THAT bitmap sidesteps font metrics entirely: the
+  // image is centred on (EYE_CX,EYE_CY) and scaled to fit, so it can't be clipped and looks identical
+  // everywhere. It's also far cheaper to animate — scaleX on a composited image vs re-rasterising a
+  // 340px glyph every frame, which was a Firefox lag source.
+  const flipSym = document.createElementNS(SVGNS, 'image');
   flipSym.id = 'flipSym';
-  flipSym.setAttribute('x', EYE_CX); flipSym.setAttribute('y', EYE_CY);
-  flipSym.setAttribute('text-anchor', 'middle');     // (no dominant-baseline — its emoji metrics differ per browser)
-  flipSym.setAttribute('font-family', SYM_FONT);     // pin the font so the canvas ink-measure below matches the SVG glyph
-  flipSym.setAttribute('fill', '#0c0c0c');
+  flipSym.setAttribute('preserveAspectRatio', 'none');   // w/h already match the ink aspect → no distortion
   hazard.appendChild(flipSym);
-  // ☣/☢ are emoji glyphs, and every engine seats the emoji at a DIFFERENT vertical offset inside its
-  // font metric box (Firefox ~45px lower than Chrome). getBBox() only sees that metric box, not the
-  // visible ink — so box-centring can't fix it. Instead rasterise the glyph to a canvas (same font) and
-  // measure where the real INK centre sits relative to the baseline / advance-centre; cache per glyph+size.
-  const _inkCache = {};
-  function inkOffset(ch, size) {
-    const key = ch + '@' + size;
-    if (_inkCache[key]) return _inkCache[key];
-    let off = { dx: 0, dy: 0 };
+  const XLINK = 'http://www.w3.org/1999/xlink';
+  const _glyphCache = {};
+  function rasterGlyph(ch) {                          // → { url, w, h }, a PNG cropped to the glyph's ink
+    if (_glyphCache[ch]) return _glyphCache[ch];
+    let out = { url: '', w: 1, h: 1 };
     try {
-      const S = Math.ceil(size * 1.6), base = S * 0.75, cx0 = S / 2;
-      const cv = document.createElement('canvas'); cv.width = cv.height = S;
+      const PX = 384;
+      const cv = document.createElement('canvas'); cv.width = cv.height = PX;
       const ctx = cv.getContext('2d');
-      ctx.font = size + 'px ' + SYM_FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#000';
-      ctx.fillText(ch, cx0, base);
-      const d = ctx.getImageData(0, 0, S, S).data;
-      let minX = S, maxX = -1, minY = S, maxY = -1;
-      for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
-        if (d[(y * S + x) * 4 + 3] > 20) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+      ctx.font = Math.round(PX * 0.8) + 'px ' + SYM_FONT;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#0c0c0c';
+      ctx.fillText(ch, PX / 2, PX / 2);
+      const d = ctx.getImageData(0, 0, PX, PX).data;
+      let minX = PX, maxX = -1, minY = PX, maxY = -1;
+      for (let y = 0; y < PX; y++) for (let x = 0; x < PX; x++) {
+        if (d[(y * PX + x) * 4 + 3] > 24) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
       }
-      if (maxY >= 0) off = { dx: (minX + maxX) / 2 - cx0, dy: (minY + maxY) / 2 - base };
+      if (maxX >= 0) {
+        const w = maxX - minX + 1, h = maxY - minY + 1;
+        const crop = document.createElement('canvas'); crop.width = w; crop.height = h;
+        crop.getContext('2d').drawImage(cv, minX, minY, w, h, 0, 0, w, h);
+        out = { url: crop.toDataURL(), w, h };
+      }
     } catch (e) {}
-    _inkCache[key] = off; return off;
+    _glyphCache[ch] = out; return out;
   }
-  // place a glyph so its real ink centre lands on the tuned (cx, cy) — consistent across browsers
+  // place the bitmap so its centre lands on (EYE_CX,EYE_CY), scaled so its larger side == SYM_TARGET
   function setFace(ch) {
-    const c = SYM_CFG[ch] || { cx: 300, cy: 342, size: 248 };
-    flipSym.textContent = ch;
-    flipSym.setAttribute('font-size', c.size);
-    const off = inkOffset(ch, c.size);
-    flipSym.setAttribute('x', (c.cx - off.dx).toFixed(1));
-    flipSym.setAttribute('y', (c.cy - off.dy).toFixed(1));
+    const g = rasterGlyph(ch);
+    const s = SYM_TARGET / Math.max(g.w, g.h), w = g.w * s, h = g.h * s;
+    flipSym.setAttribute('width', w.toFixed(1)); flipSym.setAttribute('height', h.toFixed(1));
+    flipSym.setAttribute('x', (EYE_CX - w / 2).toFixed(1)); flipSym.setAttribute('y', (EYE_CY - h / 2).toFixed(1));
+    flipSym.setAttribute('href', g.url); flipSym.setAttributeNS(XLINK, 'href', g.url);
   }
+  rasterGlyph('☣'); rasterGlyph('☢');                // warm the cache so the first flip paints instantly
   // horizontal "card flip" via scaleX (transform attribute → works on every engine, like the lid blink)
   const sx = (el, s) => el.setAttribute('transform', `translate(${EYE_CX} ${EYE_CY}) scale(${s.toFixed(3)} 1) translate(${-EYE_CX} ${-EYE_CY})`);
   const sxEye = (s) => eyeVis.forEach((el) => sx(el, s));
@@ -357,13 +362,23 @@
   if (skipFlip) { if (flipSym.isConnected) flipSym.remove(); eyeVis.forEach((el) => { el.style.opacity = '1'; el.removeAttribute('transform'); }); }
   else startSpin();
 
+  // change-detection for the per-frame transforms: at rest the eye is settled, so re-writing the lid
+  // and gaze transforms every frame just churns paint — and because #gaze carries the drop-shadow
+  // filter, re-setting its transform re-renders that (Firefox-expensive) filter on every idle frame.
+  // Only write when the value actually changed, so the loop goes quiet the moment the eye settles.
+  let _lidT = '', _gazeT = '', _creaseO = '';
   (function tick() {
     intensity += ((blessed ? 0 : targetInt) - intensity) * 0.12;
     openness += (1 - openness) * 0.16;                 // the eye stays open
     gx += (tgx - gx) * 0.14; gy += (tgy - gy) * 0.14;
-    if (!busy) lid.setAttribute('transform', `translate(${EX} ${EY}) scale(1 ${openness.toFixed(4)}) translate(${-EX} ${-EY})`);
-    gaze.setAttribute('transform', `translate(${gx.toFixed(2)} ${gy.toFixed(2)})`);
-    crease.style.opacity = (1 - Math.min(1, openness * 1.25)).toFixed(3);
+    if (!busy) {
+      const lt = `translate(${EX} ${EY}) scale(1 ${openness.toFixed(4)}) translate(${-EX} ${-EY})`;
+      if (lt !== _lidT) { _lidT = lt; lid.setAttribute('transform', lt); }
+    }
+    const gt = `translate(${gx.toFixed(2)} ${gy.toFixed(2)})`;
+    if (gt !== _gazeT) { _gazeT = gt; gaze.setAttribute('transform', gt); }   // settled → no filter re-render
+    const co = (1 - Math.min(1, openness * 1.25)).toFixed(3);
+    if (co !== _creaseO) { _creaseO = co; crease.style.opacity = co; }
     applyIntensity(intensity);
     // After a bfcache restore (Back from a rabbit hole) Firefox keeps painting the frozen alarm-red
     // triangle even though resetEye() already cleared the style. CLEARING an inline fill doesn't

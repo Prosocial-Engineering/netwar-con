@@ -266,26 +266,46 @@
     '☣': { cx: 298, cy: 305, size: 334 },
     '☢': { cx: 301, cy: 328, size: 340 },
   };
+  const SYM_FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif";
   const flipSym = document.createElementNS(SVGNS, 'text');
   flipSym.id = 'flipSym';
   flipSym.setAttribute('x', EYE_CX); flipSym.setAttribute('y', EYE_CY);
   flipSym.setAttribute('text-anchor', 'middle');     // (no dominant-baseline — its emoji metrics differ per browser)
+  flipSym.setAttribute('font-family', SYM_FONT);     // pin the font so the canvas ink-measure below matches the SVG glyph
   flipSym.setAttribute('fill', '#0c0c0c');
   hazard.appendChild(flipSym);
-  // set a glyph at its tuned centre/size, then fine-centre by ACTUAL rendered bounds (cross-browser)
+  // ☣/☢ are emoji glyphs, and every engine seats the emoji at a DIFFERENT vertical offset inside its
+  // font metric box (Firefox ~45px lower than Chrome). getBBox() only sees that metric box, not the
+  // visible ink — so box-centring can't fix it. Instead rasterise the glyph to a canvas (same font) and
+  // measure where the real INK centre sits relative to the baseline / advance-centre; cache per glyph+size.
+  const _inkCache = {};
+  function inkOffset(ch, size) {
+    const key = ch + '@' + size;
+    if (_inkCache[key]) return _inkCache[key];
+    let off = { dx: 0, dy: 0 };
+    try {
+      const S = Math.ceil(size * 1.6), base = S * 0.75, cx0 = S / 2;
+      const cv = document.createElement('canvas'); cv.width = cv.height = S;
+      const ctx = cv.getContext('2d');
+      ctx.font = size + 'px ' + SYM_FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#000';
+      ctx.fillText(ch, cx0, base);
+      const d = ctx.getImageData(0, 0, S, S).data;
+      let minX = S, maxX = -1, minY = S, maxY = -1;
+      for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+        if (d[(y * S + x) * 4 + 3] > 20) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+      }
+      if (maxY >= 0) off = { dx: (minX + maxX) / 2 - cx0, dy: (minY + maxY) / 2 - base };
+    } catch (e) {}
+    _inkCache[key] = off; return off;
+  }
+  // place a glyph so its real ink centre lands on the tuned (cx, cy) — consistent across browsers
   function setFace(ch) {
     const c = SYM_CFG[ch] || { cx: 300, cy: 342, size: 248 };
     flipSym.textContent = ch;
     flipSym.setAttribute('font-size', c.size);
-    flipSym.setAttribute('x', c.cx); flipSym.setAttribute('y', c.cy);
-    // Centre the ACTUAL rendered glyph box on (c.cx, c.cy). Emoji metrics differ per engine
-    // (Firefox renders ☣/☢ larger + shifted vs Chrome), so correcting Y only left them off-centre
-    // in Firefox — compensate on BOTH axes from the measured bounds → consistent across browsers.
-    try {
-      const bb = flipSym.getBBox();
-      flipSym.setAttribute('x', (c.cx + (c.cx - (bb.x + bb.width / 2))).toFixed(1));
-      flipSym.setAttribute('y', (c.cy + (c.cy - (bb.y + bb.height / 2))).toFixed(1));
-    } catch (e) {}
+    const off = inkOffset(ch, c.size);
+    flipSym.setAttribute('x', (c.cx - off.dx).toFixed(1));
+    flipSym.setAttribute('y', (c.cy - off.dy).toFixed(1));
   }
   // horizontal "card flip" via scaleX (transform attribute → works on every engine, like the lid blink)
   const sx = (el, s) => el.setAttribute('transform', `translate(${EYE_CX} ${EYE_CY}) scale(${s.toFixed(3)} 1) translate(${-EYE_CX} ${-EYE_CY})`);

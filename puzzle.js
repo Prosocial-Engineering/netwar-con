@@ -264,6 +264,10 @@
   // 5.wav is the final unlock for the heart burst (used by the bless / pink-cascade sequence)
   const PUZZLE = ['assets/sfx/1.wav', 'assets/sfx/2.wav', 'assets/sfx/3.wav', 'assets/sfx/4.wav', 'assets/sfx/5.wav']
     .map((s) => { const a = new Audio(s); a.preload = 'auto'; return a; });
+  // Force the unlock sounds to download (~5MB of WAV total) a beat after load. Firefox treats
+  // preload="auto" on a scripted Audio conservatively, so without an explicit load() the first
+  // bless/alarm stalls fetching them. Deferred so it doesn't compete with the gate's first paint.
+  setTimeout(() => { PUZZLE.forEach((a) => { try { a.load(); } catch (e) {} }); }, 1500);
   function puzzle(i) { if (!soundOn) return; try { const a = PUZZLE[i]; if (a) { a.currentTime = 0; a.play().catch(() => {}); } } catch (e) {} }
 
   // (d) the OPENING: large hazard symbols flip in the CENTRE of the triangle — ☣ → ☢ → eye (the 3rd flip)
@@ -294,9 +298,9 @@
   hazard.appendChild(flipSym);
   const XLINK = 'http://www.w3.org/1999/xlink';
   const _glyphCache = {};
-  function rasterGlyph(ch) {                          // → { url, w, h }, a PNG cropped to the glyph's ink
+  function rasterGlyph(ch) {                          // → { url, w, h, cx, cy }: PNG cropped to ink + its mass-centre (fraction of w/h)
     if (_glyphCache[ch]) return _glyphCache[ch];
-    let out = { url: '', w: 1, h: 1 };
+    let out = { url: '', w: 1, h: 1, cx: 0.5, cy: 0.5 };
     try {
       const PX = 1024;          // render big, then crop to ink + downscale to display size → crisp (was 384 → upscaled → pixelated)
       const cv = document.createElement('canvas'); cv.width = cv.height = PX;
@@ -305,25 +309,27 @@
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#0c0c0c';
       ctx.fillText(ch, PX / 2, PX / 2);
       const d = ctx.getImageData(0, 0, PX, PX).data;
-      let minX = PX, maxX = -1, minY = PX, maxY = -1;
+      let minX = PX, maxX = -1, minY = PX, maxY = -1, sumX = 0, sumY = 0, n = 0;
       for (let y = 0; y < PX; y++) for (let x = 0; x < PX; x++) {
-        if (d[(y * PX + x) * 4 + 3] > 24) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+        if (d[(y * PX + x) * 4 + 3] > 24) { if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; sumX += x; sumY += y; n++; }
       }
       if (maxX >= 0) {
         const w = maxX - minX + 1, h = maxY - minY + 1;
         const crop = document.createElement('canvas'); crop.width = w; crop.height = h;
         crop.getContext('2d').drawImage(cv, minX, minY, w, h, 0, 0, w, h);
-        out = { url: crop.toDataURL(), w, h };
+        // centre of MASS within the crop, as a fraction of w/h (so it survives the later scale)
+        out = { url: crop.toDataURL(), w, h, cx: (sumX / n - minX) / w, cy: (sumY / n - minY) / h };
       }
     } catch (e) {}
     _glyphCache[ch] = out; return out;
   }
-  // place the bitmap so its centre lands on (EYE_CX,EYE_CY), scaled so its larger side == SYM_TARGET
+  // place the bitmap so its centre of MASS lands on (EYE_CX,EYE_CY) — bbox-centring made the bottom-
+  // heavy biohazard read low next to the symmetric radioactive + the eye. Scaled so larger side == SYM_TARGET.
   function setFace(ch) {
     const g = rasterGlyph(ch);
     const s = SYM_TARGET / Math.max(g.w, g.h), w = g.w * s, h = g.h * s;
     flipSym.setAttribute('width', w.toFixed(1)); flipSym.setAttribute('height', h.toFixed(1));
-    flipSym.setAttribute('x', (EYE_CX - w / 2).toFixed(1)); flipSym.setAttribute('y', (EYE_CY - h / 2).toFixed(1));
+    flipSym.setAttribute('x', (EYE_CX - g.cx * w).toFixed(1)); flipSym.setAttribute('y', (EYE_CY - g.cy * h).toFixed(1));
     flipSym.setAttribute('href', g.url); flipSym.setAttributeNS(XLINK, 'href', g.url);
   }
   rasterGlyph('☣'); rasterGlyph('☢');                // warm the cache so the first flip paints instantly

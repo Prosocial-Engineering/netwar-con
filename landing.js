@@ -68,13 +68,15 @@
   // visibly pop in as you scroll. Warm them into the HTTP cache a beat after the reveal so the lazy
   // <img>s load instantly from cache when scrolled to — matching Chrome's eagerness.
   function warmRevealImages() {
-    setTimeout(() => {
-      document.querySelectorAll('#reveal img').forEach((img) => {
-        const src = img.currentSrc || img.getAttribute('src');
-        if (src) { const w = new Image(); w.src = src; }
-      });
-    }, 1000);
+    document.querySelectorAll('#reveal img').forEach((img) => {        // host portraits, the emblem
+      const src = img.currentSrc || img.getAttribute('src');
+      if (src) { const w = new Image(); w.src = src; }
+    });
+    const paper = new Image(); paper.src = 'assets/paper.jpg';          // graph-paper texture (a CSS bg, not an <img>)
   }
+  // Warm the landing pictures DURING the gate (not only on reveal) so they're already cached by the
+  // time you solve the puzzle and scroll — deferred so it doesn't compete with the gate's first paint.
+  setTimeout(warmRevealImages, 2500);
 
   /* ---- the reveal: cross from the gate into The Last Psyop (called by puzzle.js on bless) ---- */
   function reveal(instant) {

@@ -117,6 +117,16 @@ settled. Four distinct causes, four fixes.
   drop `SYM_TARGET` 296 → 230 (sits inside the triangle at ~eye size).
 - **Commit:** `72bfcda`
 
+### Biohazard read low next to the radioactive + the eye
+- **Root cause:** the bitmap was centred by its ink **bounding box**, but the biohazard glyph's centre
+  of **mass** sits ~5.6% of its height below its bbox centre (measured), while the radioactive's is
+  symmetric — so bbox-centring made ☣ look low.
+- **Fix that worked:** centre each glyph by its **centre of mass** (alpha-weighted centroid) instead of
+  its bbox — `rasterGlyph()` returns `cx/cy` (the mass-centre as a fraction), `setFace()` lands that on
+  the eye centre. The symmetric radioactive doesn't move; the bottom-heavy biohazard rises ~12 units
+  into alignment.
+- **Commit:** `9819957`
+
 ---
 
 ## 5. Firefox: warning triangle stuck RED after Back (bfcache)
@@ -188,11 +198,17 @@ The signature Firefox-only bug. Resisted three in-place fixes before the right o
   - Preload the war-room **poster** instead of the bogus video preload: `<link rel="preload" as="image"
     href="assets/warroom.jpg">` → backdrop paints instantly on reveal, every browser.
   - Warm the muzak: `bgm.preload = 'auto'; bgm.load();` (download only; playback still needs the gesture).
-  - Warm the below-the-fold portraits into cache a beat after reveal (`new Image().src = …`) so the lazy
-    `<img>`s load instantly on scroll, matching Chrome's eagerness.
+  - Warm the below-the-fold portraits into cache (`new Image().src = …`) so the lazy `<img>`s load
+    instantly on scroll, matching Chrome's eagerness.
 - **Commit:** `8f08e6a`
-- **Note:** `assets/revbg.mp4` is **8.4 MB** — the genuinely heavy asset; the poster covers it while the
-  loop streams in. Compressing it is the real win if the video motion needs to be instant.
+- **Follow-up — preload so nothing stalls (`9819957`):** the heart-unlock SFX are ~5 MB of WAV and
+  Firefox treats `preload="auto"` on a scripted `Audio` conservatively, so the first bless/alarm stalled
+  fetching them → force a deferred `load()`. And warm the landing pictures (portraits, emblem, the
+  paper-texture CSS bg) **during the gate** (a deferred `setTimeout`) instead of only on reveal, so
+  they're cached before you solve the puzzle and scroll.
+- **Note:** `assets/revbg.mp4` is **8.4 MB** and the unlock SFX are **~5 MB of WAV** — the genuinely
+  heavy assets. Preloading hides the latency; **compressing** them (WAV → MP3/Ogg ≈ 10× smaller, and a
+  smaller MP4) is the real win if bandwidth is tight.
 
 ---
 

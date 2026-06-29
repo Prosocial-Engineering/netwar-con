@@ -1,18 +1,11 @@
 This repo is for the website & general planning for the **September 4-6 event in Austin, TX**. 
 
-https://lastpsyop.com/
-https://luma.com/psyop-hackathon
+- https://lastpsyop.com/ - the puzzle that unlocks the event (you must turn the infohazard into an infoblessing)
+- https://luma.com/psyop-hackathon - event page with public details and apply to attend
 
-Also known as "Netwar Con" // "Propaganda Party" // "The First Psyops Hackathon".
+_Alternative names: "Netwar Con" // "Propaganda Party" // "Psyops Hackathon" // "The Last Psyop"_
 
 ----
 
-### Appendix / WIP writeups & videos
-
-- [Appendix.md](./docs/Appendix.md)
-- [Game.md](./docs/Game.md)
-- Wiki: https://nexus.libertymyself.com/index.php/The_September_Event
-
-Initial June 1st announcement - https://defenderofthebasic.substack.com/p/the-last-psyop
-
+Repo for the game design & instructions for the weekend: https://github.com/Prosocial-Engineering/September-Game
 
